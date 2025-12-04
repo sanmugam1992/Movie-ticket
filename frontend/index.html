@@ -1,7 +1,137 @@
-
+<!doctype html>
 <html>
+<head>
+  <meta charset="utf-8">
+  <title>Movie Ticket Booking App</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
+      padding: 20px;
+      max-width: 900px;
+      margin: auto;
+    }
+    .movie-card {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    .movie-title {
+      font-size: 24px;
+      margin-bottom: 5px;
+    }
+    .desc {
+      color: #555;
+    }
+    .show-box {
+      margin-top: 10px;
+      padding: 10px;
+      background: #fafafa;
+      border-radius: 6px;
+      border: 1px solid #ddd;
+    }
+    button {
+      padding: 8px 14px;
+      border: none;
+      background: #2196f3;
+      color: white;
+      cursor: pointer;
+      border-radius: 6px;
+    }
+    button:hover {
+      background: #0b7dda;
+    }
+    #msg {
+      padding: 10px;
+      background: #d4ffd4;
+      display: none;
+      margin-bottom: 20px;
+      border: 1px solid #58c458;
+      border-radius: 5px;
+      color: #2b7a2b;
+    }
+  </style>
+</head>
+
 <body>
-<h1>Movie Ticket Booking App</h1>
-<p>Backend Running Successfully!</p>
+
+  <h1>🎬 Movie Ticket Booking</h1>
+  <p>Select a movie and book your seat instantly.</p>
+
+  <div id="msg"></div>
+
+  <div id="movies"></div>
+
+<script>
+async function loadMovies() {
+  const res = await fetch('/api/movies');
+  const movies = await res.json();
+
+  const container = document.getElementById('movies');
+  container.innerHTML = '';
+
+  movies.forEach(movie => {
+    const card = document.createElement('div');
+    card.className = 'movie-card';
+
+    card.innerHTML = `
+      <div class="movie-title">${movie.title}</div>
+      <div class="desc">${movie.description}</div>
+      <div id="shows-${movie.id}">
+        <i>Loading show timings...</i>
+      </div>
+    `;
+
+    container.appendChild(card);
+    loadShows(movie.id);
+  });
+}
+
+async function loadShows(movieId) {
+  const res = await fetch(`/api/shows/${movieId}`);
+  const shows = await res.json();
+
+  const box = document.getElementById(`shows-${movieId}`);
+  box.innerHTML = '';
+
+  shows.forEach(show => {
+    const available = show.total_seats - show.booked_seats;
+
+    box.innerHTML += `
+      <div class="show-box">
+        <b>⏰ ${show.show_time}</b><br>
+        Seats Available: <b>${available}</b><br><br>
+        <button onclick="bookSeat(${show.id})">Book 1 Seat</button>
+      </div>
+    `;
+  });
+}
+
+async function bookSeat(showId) {
+  const res = await fetch('/api/book', {
+    method: 'POST',
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({show_id: showId, seats: 1})
+  });
+
+  const data = await res.json();
+
+  const msgBox = document.getElementById('msg');
+  
+  if (res.status === 201) {
+    msgBox.style.display = 'block';
+    msgBox.innerHTML = `🎉 Booking Successful! Your Booking ID: <b>${data.booking_id}</b>`;
+    loadMovies();
+  } else {
+    alert('❌ ' + (data.error || 'Failed to book'));
+  }
+}
+
+loadMovies();
+</script>
+
 </body>
 </html>
